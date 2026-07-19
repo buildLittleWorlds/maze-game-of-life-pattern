@@ -3,22 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maze Automaton — B3/S12345</title>
+<title>The Maze Automaton — B3/S12345</title>
 <style>
-  :root { --ink:#1f3d2f; --accent:#2f7a55; --paper:#f4f1ea; }
+  :root { --ink:#1f3d2f; --accent:#2f7a55; --paper:#f4f1ea; --rule:#e0daca; }
   * { box-sizing: border-box; }
   body {
     font-family: Georgia, "Times New Roman", serif;
     max-width: 820px; margin: 0 auto; padding: 24px;
-    color: var(--ink); background: #fbfaf6; line-height: 1.6;
+    color: var(--ink); background: #fbfaf6; line-height: 1.65;
   }
-  h1 { font-size: 1.6rem; margin-bottom: 0.2em; }
+  header { text-align: center; margin-bottom: 8px; }
+  h1 { font-size: 1.9rem; margin-bottom: 0.15em; }
   .sub { color: #555; margin-top: 0; font-style: italic; }
+  h2 { font-size: 1.3rem; border-bottom: 1px solid var(--rule); padding-bottom: 4px; margin-top: 34px; }
+  h3 { font-size: 1.08rem; margin-top: 22px; }
   canvas {
     display: block; width: 100%; height: auto;
     background: var(--paper); border: 1px solid #cfc9bb; border-radius: 4px;
     image-rendering: pixelated;
   }
+  .app { margin: 18px 0 6px; }
   .controls { margin: 14px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   button {
     font: inherit; padding: 6px 14px; border: 1px solid var(--accent);
@@ -26,84 +30,133 @@
   }
   button.primary { background: var(--accent); color: #fff; }
   button:hover { filter: brightness(0.95); }
-  .rules { margin: 10px 0; font-size: 0.95rem; }
+  .rules { margin: 10px 0; font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 8px; }
   .rules label { margin-right: 10px; white-space: nowrap; }
   .status { font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; color: #444; }
-  fieldset { border: 1px solid #ddd6c8; border-radius: 6px; padding: 8px 12px; margin: 6px 0; }
+  fieldset { border: 1px solid #ddd6c8; border-radius: 6px; padding: 8px 12px; margin: 0; flex: 1 1 320px; }
   legend { font-weight: bold; padding: 0 6px; }
-  article { margin-top: 28px; }
-  article h2 { font-size: 1.25rem; border-bottom: 1px solid #e0daca; padding-bottom: 4px; }
+  .abstract { background: #f0ede3; border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 0 6px 6px 0; font-size: 0.97rem; }
+  article { margin-top: 10px; }
   code { background: #eee8db; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  sup a { text-decoration: none; color: var(--accent); font-weight: bold; }
+  ol.refs { font-size: 0.9rem; line-height: 1.5; padding-left: 22px; }
+  ol.refs li { margin-bottom: 8px; }
+  ol.refs a { color: var(--accent); word-break: break-word; }
+  .note { font-size: 0.85rem; color: #666; font-style: italic; }
+  footer { margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 12px; font-size: 0.85rem; color: #666; }
 </style>
 </head>
 <body>
-  <h1>The Maze Automaton</h1>
-  <p class="sub">A two-state cellular automaton running rule <strong>B3/S12345</strong> — known to the community as "Maze."</p>
+  <header>
+    <h1>The Maze Automaton</h1>
+    <p class="sub">Growing labyrinths from the Life-like cellular automaton <strong>B3/S12345</strong> — the rule known to the community as &ldquo;Maze.&rdquo;</p>
+  </header>
 
-  <canvas id="grid" width="600" height="360"></canvas>
+  <!-- ===================== INTERACTIVE APP ===================== -->
+  <section class="app">
+    <canvas id="grid" width="600" height="360"></canvas>
 
-  <div class="controls">
-    <button id="run" class="primary">Run</button>
-    <button id="step">Step</button>
-    <button id="reset">Reset seed</button>
-    <button id="clear">Clear</button>
-    <button id="random">Random fill</button>
-    <label>Speed <input id="speed" type="range" min="1" max="60" value="18"></label>
-  </div>
+    <div class="controls">
+      <button id="run" class="primary">Run</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset seed</button>
+      <button id="clear">Clear</button>
+      <button id="random">Random fill</button>
+      <label>Speed <input id="speed" type="range" min="1" max="60" value="18"></label>
+    </div>
 
-  <div class="rules">
-    <fieldset>
-      <legend>Born with</legend>
-      <span id="bornBoxes"></span>
-    </fieldset>
-    <fieldset>
-      <legend>Survives with</legend>
-      <span id="surviveBoxes"></span>
-    </fieldset>
-  </div>
+    <div class="rules">
+      <fieldset>
+        <legend>Born with</legend>
+        <span id="bornBoxes"></span>
+      </fieldset>
+      <fieldset>
+        <legend>Survives with</legend>
+        <span id="surviveBoxes"></span>
+      </fieldset>
+    </div>
 
-  <p class="status">Rule <span id="ruleName">B3/S12345</span> · generation <span id="gen">0</span> · <span id="pop">0</span> cells</p>
+    <p class="status">Rule <span id="ruleName">B3/S12345</span> · generation <span id="gen">0</span> · <span id="pop">0</span> cells</p>
+    <p class="note">Tip: press <strong>Run</strong> to grow a maze from the R-pentomino seed, or <strong>Random fill</strong> to watch corridors self-organize from noise. Toggle the rule boxes to explore neighboring rules (try <code>B3/S1234</code>, &ldquo;Mazectric,&rdquo; for straighter corridors). Click and drag on the grid to paint your own cells.</p>
+  </section>
 
+  <!-- ===================== PAPER ===================== -->
   <article>
-    <h2>Why a maze emerges</h2>
+    <h2>Abstract</h2>
+    <p class="abstract">
+      This page is a single-file, browser-based cellular automaton running the rule <strong>B3/S12345</strong>. From a small seed it reliably grows a network of thin walls separated by empty corridors — a structure that reads unmistakably as a maze. Below, we explain what the rule is, situate it within the wider community that has catalogued and named such rules over the past half-century, and give a mechanistic account of <em>why</em> labyrinthine structure emerges from so simple a specification. The naming and the maze-generation use case are established in the literature; the specific experiment here — growing the pattern from an R-pentomino on a finite board and reasoning through the wall-formation mechanism — is our own contribution.
+    </p>
+
+    <h2>1. Background: the Life family</h2>
     <p>
-      The rule has two dials. A dead cell comes to life only when it has exactly <strong>3</strong>
-      live neighbors (Born&nbsp;with&nbsp;3). A live cell stays alive whenever it has
-      <strong>1&nbsp;to&nbsp;5</strong> live neighbors, dying only if it is completely isolated
-      (0 neighbors) or overcrowded (6, 7, or 8 neighbors). Those two choices, working against each
-      other, are what carve corridors.
+      In October 1970, Martin Gardner introduced John Conway's Game of Life to a wide audience in his <em>Scientific American</em> &ldquo;Mathematical Games&rdquo; column.<sup><a href="#r1">[1]</a></sup> The Game of Life is a two-dimensional grid of cells, each alive or dead, where a cell's next state depends only on its own state and on how many of its eight surrounding (Moore-neighborhood) cells are alive. Conway's rule is written <strong>B3/S23</strong>: a dead cell is <em>born</em> with exactly 3 live neighbors, and a live cell <em>survives</em> with 2 or 3.<sup><a href="#r2">[2]</a></sup>
     </p>
     <p>
-      The generous survival band is the key. Because almost any cell with a neighbor or two survives,
-      structure that forms tends to <em>persist</em> rather than flicker away — the automaton has a
-      strong memory. But survival is not unconditional: the death-by-overcrowding at 6+ neighbors
-      punishes solid, filled blocks. A cell buried in the interior of a full region sees eight
-      neighbors and dies. So solid fills are unstable; they hollow themselves out from the inside.
+      Conway's rule is only one point in a much larger space. Because each cell reacts only to a count of neighbors (0–8) and its own state, there are 2<sup>18</sup> = 262,144 possible rules of this form. This whole space is the family of <strong>Life-like cellular automata</strong>, of which Conway's Game of Life is simply the most famous member. Only a small fraction have been studied closely, but those that have often earn names — Replicator, Seeds, HighLife, Day &amp; Night, Diamoeba, Life without Death — each capturing a characteristic behavior.<sup><a href="#r2">[2]</a></sup>
+    </p>
+
+    <h3>1.1 How a community grew up around these rules</h3>
+    <p>
+      Interest never stayed confined to a single paper. Over decades a loose but real community — hobbyists, programmers, and academics — mapped the space through systematic simulation and pattern hunting. Notation was standardized so people could talk to each other: the Wolfram code introduced by Wolfram and Packard in 1985, the survival/birth string used by <em>Mirek's Cellebration</em> (MCell), and the <code>B.../S...</code> &ldquo;birth/survival&rdquo; form used by the Golly software and the RLE pattern format that this page uses throughout.<sup><a href="#r2">[2]</a></sup> Tools like MCell and Golly let anyone explore rules interactively, and reference sites — above all the <strong>LifeWiki</strong>, hosted by ConwayLife.com — became shared catalogues where rules, patterns, and their names are documented.<sup><a href="#r4">[4]</a></sup> Academic work followed too: David Eppstein's &ldquo;Growth and decay in Life-like cellular automata&rdquo; analyzes which rules can even support motion or expansion,<sup><a href="#r6">[6]</a></sup> and researchers such as Dean Hickerson (who in 1993 offered a prize for a space-filling pattern in Diamoeba) and Nathaniel Johnston have published detailed studies of individual rules.<sup><a href="#r2">[2]</a></sup><sup><a href="#r8">[8]</a></sup> The result is a body of shared vocabulary and results a newcomer can plug into — which is exactly what this project does.
+    </p>
+
+    <h2>2. The Maze rule (B3/S12345)</h2>
+    <p>Within that catalogue, <strong>B3/S12345</strong> is named <strong>&ldquo;Maze.&rdquo;</strong> Its two dials are:</p>
+    <ul>
+      <li><strong>Born with 3</strong> — a dead cell comes to life only when it has <em>exactly</em> 3 live neighbors (identical to Conway's Life).</li>
+      <li><strong>Survives with 1–5</strong> — a live cell stays alive with anywhere from 1 to 5 live neighbors, dying only if it is completely isolated (0 neighbors) or overcrowded (6, 7, or 8).</li>
+    </ul>
+    <p>
+      The LifeWiki describes it as an expanding rule that crystallizes into maze-like designs.<sup><a href="#r4">[4]</a></sup> A close relative, <strong>Mazectric (B3/S1234)</strong>, drops survival-on-5 and, as Wikipedia notes, tends to produce longer and straighter corridors than Maze.<sup><a href="#r3">[3]</a></sup>
+    </p>
+
+    <h3>2.1 How the maze was noticed and put to use</h3>
+    <p>
+      The maze behavior is not a private discovery; the rule was <em>named</em> for it, and it has been turned into a practical technique. The cellular-automaton approach to <strong>maze generation</strong> is documented on the LifeWiki and reimplemented widely.<sup><a href="#r4">[4]</a></sup> One clear worked example is Christian Hill's 2018 scipython.com tutorial, which seeds a small random patch and runs B3/S12345 to grow an animated maze, describing the birth-on-3 / survive-on-1–5 rule in exactly these terms.<sup><a href="#r5">[5]</a></sup> Andreas Rejbrand's writing likewise names both &ldquo;Maze&rdquo; (B3/S12345) and &ldquo;Mazectric,&rdquo;<sup><a href="#r7">[7]</a></sup> and mathematician Nathaniel Johnston has discussed the &ldquo;maze&rdquo; rule in technical posts (for instance, noting that no spaceships are currently known in it).<sup><a href="#r8">[8]</a></sup>
+    </p>
+    <p class="note">
+      We could not attribute the <em>first</em> observation of the maze behavior to a single named individual; like many facts in this space it appears to be community knowledge consolidated on the LifeWiki rather than credited to one discoverer. This page therefore claims only that the name and use case are established, not that any one person originated them.
+    </p>
+
+    <h2>3. Why a maze emerges</h2>
+    <p>
+      The maze is the product of the two rules pulling against each other.
     </p>
     <p>
-      Meanwhile birth-on-exactly-3 is a thin, selective growth condition. It lets the living region
-      creep outward along its frontier, but only where the local geometry presents precisely three
-      neighbors — it cannot fill wide open space quickly. Growth therefore happens as narrow
-      fingers, not sheets.
+      The <strong>generous survival band (1–5)</strong> gives the system a strong memory: almost any cell with a neighbor or two survives, so structure that forms tends to persist rather than flicker away. But survival is not unconditional — death by overcrowding at 6 or more neighbors penalizes solid, filled blocks. A cell buried inside a fully packed region sees eight neighbors and dies, so solid fills are unstable and hollow themselves out from the inside.
     </p>
     <p>
-      Put the two together and you get a self-organizing tension: <strong>the interior cannot stay
-      solid (overcrowding hollows it out) and the exterior cannot fill freely (birth is too
-      selective)</strong>. The system settles into the one geometry that satisfies both constraints
-      at once — thin walls of live cells one or two thick, separated by empty corridors. A wall
-      that is too thick loses its core to overcrowding; a gap that closes up gets reopened. What
-      survives everywhere is the width that is stable under both rules, and that stable width is a
-      wall bordering a passage. Repeated across the board, those stable walls interlock into the
-      branching dead-end corridors we read as a maze.
+      The <strong>selective birth rule (exactly 3)</strong> is a thin growth condition. It lets the living region creep outward along its frontier, but only where the local geometry presents precisely three neighbors, so it cannot flood open space quickly. Growth happens as narrow fingers, not sheets.
     </p>
     <p>
-      Once growth reaches the edges and no cell can find a stable-but-different neighborhood, the
-      walls freeze: the maze becomes a still life. That "grows, then locks in" behavior is exactly
-      what you saw on the original bench. The close relative <code>B37/S12345</code> ("Mazectric")
-      biases the same process toward longer, straighter corridors by adding one more birth
-      condition.
+      Put together, they create a standing tension: <strong>the interior cannot stay solid (overcrowding hollows it out), and the exterior cannot fill freely (birth is too selective).</strong> The system settles into the one geometry that satisfies both constraints at once — walls one or two cells thick, separated by empty passages. A wall that grows too thick loses its core to overcrowding; a gap that closes gets reopened by births along its edge. The width stable under both rules everywhere is precisely a thin wall bordering a corridor, and repeated across the board those interlocking stable walls form the branching, dead-ended passages we read as a maze. Once growth reaches the edges and no cell can find a stable-but-different neighborhood, the walls freeze and the maze becomes a still life — it grows, then locks in.
     </p>
+    <p class="note">
+      This account is our own reasoning about the mechanism rather than a quotation of a specific published proof; it is consistent with the general principle (noted by Eppstein and others<sup><a href="#r6">[6]</a></sup>) that a rule's birth and survival conditions jointly determine whether it fizzles, explodes, or self-organizes into stable structure.
+    </p>
+
+    <h2>4. This project's connection to the tradition</h2>
+    <p>
+      This page is a small, faithful instance of what the community has done at large scale: pick a point in the 262,144-rule space, run it, watch what self-organizes, and try to explain it. The connections are direct. The rule implemented here, B3/S12345, is the community's named &ldquo;Maze&rdquo; rule. The program uses the standard Golly/RLE <code>B.../S...</code> notation so its settings are legible to anyone in the field. It reproduces the documented maze-generation technique — you can seed it with random noise, as in the scipython tutorial,<sup><a href="#r5">[5]</a></sup> or with the R-pentomino, a classic Life seed, and watch corridors crystallize either way. And the interface exposes the birth and survival conditions as toggles, so the tool doubles as a small rule-space explorer: unchecking survival's 4 and 5 tames the growth, and switching to B3/S1234 gives Mazectric's straighter corridors. The novelty here is not the rule or its name — those belong to the community — but the interactive presentation and the worked explanation of why the labyrinth appears.
+    </p>
+
+    <h2>References</h2>
+    <ol class="refs">
+      <li id="r1">M. Gardner, &ldquo;Mathematical Games: The fantastic combinations of John Conway's new solitaire game 'life',&rdquo; <em>Scientific American</em> 223 (October 1970), 120–123.</li>
+      <li id="r2">&ldquo;Life-like cellular automaton,&rdquo; Wikipedia. <a href="https://en.wikipedia.org/wiki/Life-like_cellular_automaton" target="_blank" rel="noopener">en.wikipedia.org/wiki/Life-like_cellular_automaton</a></li>
+      <li id="r3">&ldquo;Maze generation algorithm,&rdquo; Wikipedia (Maze / Mazectric rules). <a href="https://en.wikipedia.org/wiki/Maze_generation_algorithm" target="_blank" rel="noopener">en.wikipedia.org/wiki/Maze_generation_algorithm</a></li>
+      <li id="r4">&ldquo;List of Life-like rules,&rdquo; LifeWiki, ConwayLife.com. <a href="https://conwaylife.com/wiki/List_of_Life-like_rules" target="_blank" rel="noopener">conwaylife.com/wiki/List_of_Life-like_rules</a></li>
+      <li id="r5">C. Hill, &ldquo;Maze Generation by Cellular Automaton,&rdquo; scipython.com, 10 January 2018. <a href="https://scipython.com/blog/maze-generation-by-cellular-automaton/" target="_blank" rel="noopener">scipython.com/blog/maze-generation-by-cellular-automaton/</a></li>
+      <li id="r6">D. Eppstein, &ldquo;Growth and decay in Life-like cellular automata,&rdquo; in A. Adamatzky (ed.), <em>Game of Life Cellular Automata</em>, Springer, 2010, pp. 71–98. arXiv:0911.2890</li>
+      <li id="r7">A. Rejbrand, &ldquo;Cellular automaton maze generation.&rdquo; <a href="https://english.rejbrand.se/" target="_blank" rel="noopener">english.rejbrand.se</a> <span class="note">(verify exact article path)</span></li>
+      <li id="r8">N. Johnston, cellular-automata writings. <a href="https://njohnston.ca/tag/cellular-automata/" target="_blank" rel="noopener">njohnston.ca/tag/cellular-automata</a></li>
+    </ol>
+    <p class="note">Reference URLs were current as of research in July 2026; the LifeWiki page may present a human-verification screen on first visit.</p>
   </article>
+
+  <footer>
+    Built as an interactive study of the &ldquo;Maze&rdquo; rule. Rule and name belong to the cellular-automaton community; the interactive presentation and mechanistic analysis are the author's.
+  </footer>
 
 <script>
 (function () {
@@ -197,7 +250,6 @@
     }
   }
 
-  // --- rule checkboxes ---
   function buildBoxes(containerId, activeSet, maxN) {
     const c = document.getElementById(containerId);
     for (let i = 0; i <= maxN; i++) {
@@ -225,7 +277,6 @@
   buildBoxes('surviveBoxes', survive, 8);
   updateRuleName();
 
-  // --- controls ---
   document.getElementById('run').addEventListener('click', () => setRunning(!timer));
   document.getElementById('step').addEventListener('click', () => { setRunning(false); tick(); });
   document.getElementById('reset').addEventListener('click', () => { setRunning(false); rPentomino(); draw(); });
@@ -236,7 +287,6 @@
     if (timer) { setRunning(false); setRunning(true); }
   });
 
-  // click / drag to paint cells
   let painting = false;
   function paintAt(evt) {
     const rect = canvas.getBoundingClientRect();
